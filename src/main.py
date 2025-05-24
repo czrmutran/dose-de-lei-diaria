@@ -9,6 +9,7 @@ from flask_login import LoginManager, current_user
 from sqlalchemy import text, inspect # Import text for raw SQL and inspect for introspection
 from sqlalchemy.exc import OperationalError # Import exception for handling errors
 import logging # Import logging
+import urllib.parse
 
 # Import models and db instance
 from src.models.user import db, User, Achievement # Import Achievement
@@ -29,13 +30,20 @@ app = Flask(__name__,
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev_secret_key_replace_in_prod') # Use environment variable for secret key
 
 # --- Database Configuration ---
-# Use environment variables for database credentials for security
-db_user = os.getenv("DB_USERNAME", "root")
-db_password = os.getenv("DB_PASSWORD", "password")
-db_host = os.getenv("DB_HOST", "localhost")
-db_port = os.getenv("DB_PORT", "3306")
-db_name = os.getenv("DB_NAME", "mydb")
-app.config["SQLALCHEMY_DATABASE_URI"] = f"mysql+pymysql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+# Fallback local opcional
+if not database_url:
+    db_user = os.getenv("DB_USERNAME", "postgres")
+    db_password = os.getenv("DB_PASSWORD", "password")
+    db_host = os.getenv("DB_HOST", "localhost")
+    db_port = os.getenv("DB_PORT", "5432")
+    db_name = os.getenv("DB_NAME", "mydb")
+    database_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
